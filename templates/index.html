@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fake Medicine Detection</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1200px;
+            margin: 30px auto;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .title h1 {
+            margin-bottom: 8px;
+            color: #173b6d;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #173b6d;
+        }
+
+        input[type="file"],
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="date"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 14px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background: #173b6d;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #0f2d56;
+        }
+
+        .result-box {
+            margin-top: 18px;
+            padding: 16px;
+            border-radius: 12px;
+            background: #f8fbff;
+            border: 1px solid #dbe7f5;
+        }
+
+        .real {
+            color: green;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .fake {
+            color: red;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .error {
+            margin-top: 15px;
+            color: #b30000;
+            background: #ffe9e9;
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .success {
+            margin-top: 15px;
+            color: #0a6b2c;
+            background: #e9fff0;
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        img.preview {
+            width: 100%;
+            max-height: 320px;
+            object-fit: contain;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            margin-top: 15px;
+            background: #fafafa;
+        }
+
+        .med-item, .guide-item {
+            margin-bottom: 10px;
+        }
+
+        .med-item strong, .guide-item strong {
+            color: #173b6d;
+        }
+
+        ul {
+            margin-top: 8px;
+            padding-left: 20px;
+        }
+
+        .full {
+            margin-top: 22px;
+        }
+
+        .note {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 850px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">
+            <h1>💊 Fake Medicine Detection & Health Support System</h1>
+            <p>Upload medicine package image, search medicine details, view basic health guidance, and book doctor appointments.</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Image Prediction</h2>
+                <form action="/predict" method="post" enctype="multipart/form-data">
+                    <label>Upload Medicine Image</label>
+                    <input type="file" name="file" accept="image/*" required />
+                    <button type="submit">Predict</button>
+                </form>
+
+                {% if error %}
+                    <div class="error">{{ error }}</div>
+                {% endif %}
+
+                {% if image_path %}
+                    <img class="preview" src="{{ image_path }}" alt="Uploaded Image">
+                {% endif %}
+
+                {% if prediction %}
+                    <div class="result-box">
+                        <p>
+                            <strong>Prediction:</strong>
+                            <span class="{% if prediction == 'Real' %}real{% else %}fake{% endif %}">
+                                {{ prediction }}
+                            </span>
+                        </p>
+                        <p><strong>Confidence:</strong> {{ confidence }}</p>
+
+                        {% if probs %}
+                            <p><strong>Real Probability:</strong> {{ probs['Real'] }}</p>
+                            <p><strong>Fake Probability:</strong> {{ probs['Fake'] }}</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <h2>Medicine Information Search</h2>
+                <form action="/medicine" method="get">
+                    <label>Enter Medicine Name</label>
+                    <input type="text" name="name" placeholder="e.g. Paracetamol, Crocin, Dolo" required />
+                    <button type="submit">Search</button>
+                </form>
+
+                {% if searched_name %}
+                    <div class="result-box">
+                        <p><strong>Searched:</strong> {{ searched_name }}</p>
+                    </div>
+                {% endif %}
+
+                {% if med %}
+                    {% if med.error %}
+                        <div class="error">{{ med.error }}</div>
+                    {% else %}
+                        <div class="result-box">
+                            <div class="med-item"><strong>Brand Name:</strong> {{ med.brand_name or 'N/A' }}</div>
+                            <div class="med-item"><strong>Generic Name:</strong> {{ med.generic_name or 'N/A' }}</div>
+                            <div class="med-item"><strong>Manufacturer:</strong> {{ med.manufacturer_name or 'N/A' }}</div>
+                            <div class="med-item"><strong>Product Type:</strong> {{ med.product_type or 'N/A' }}</div>
+                            <div class="med-item"><strong>Route:</strong> {{ med.route or 'N/A' }}</div>
+                            <div class="med-item"><strong>Purpose:</strong> {{ med.purpose or 'N/A' }}</div>
+                            <div class="med-item"><strong>Indications & Usage:</strong> {{ med.indications_and_usage or 'N/A' }}</div>
+                            <div class="med-item"><strong>Warnings:</strong> {{ med.warnings or 'N/A' }}</div>
+                            <div class="med-item"><strong>Dosage:</strong> {{ med.dosage_and_administration or 'N/A' }}</div>
+                            <div class="med-item"><strong>Storage:</strong> {{ med.storage_and_handling or 'N/A' }}</div>
+                            <div class="med-item"><strong>Active Ingredient:</strong> {{ med.active_ingredient or 'N/A' }}</div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid full">
+            <div class="card">
+                <h2>Common Disease Guidance</h2>
+                <form action="/health-guide" method="get">
+                    <label>Search Disease / Condition</label>
+                    <input type="text" name="disease" placeholder="e.g. fever, cold, cough, headache, acidity, diabetes" required />
+                    <button type="submit">Get Suggestions</button>
+                </form>
+
+                <p class="note">Demo feature for project presentation. This section gives only basic educational guidance.</p>
+
+                {% if searched_disease %}
+                    <div class="result-box">
+                        <p><strong>Searched Disease:</strong> {{ searched_disease }}</p>
+                    </div>
+                {% endif %}
+
+                {% if guide %}
+                    {% if guide.error %}
+                        <div class="error">{{ guide.error }}</div>
+                    {% else %}
+                        <div class="result-box">
+                            <div class="guide-item"><strong>Condition:</strong> {{ guide.title }}</div>
+                            <div class="guide-item"><strong>Basic Information:</strong> {{ guide.about }}</div>
+
+                            <div class="guide-item">
+                                <strong>Suggested Care / Medicines:</strong>
+                                <ul>
+                                    {% for item in guide.medicines %}
+                                        <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <div class="guide-item">
+                                <strong>Health Food:</strong>
+                                <ul>
+                                    {% for item in guide.food %}
+                                        <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <div class="guide-item">
+                                <strong>Exercise / Self-care:</strong>
+                                <ul>
+                                    {% for item in guide.exercise %}
+                                        <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <div class="guide-item"><strong>Doctor Advice:</strong> {{ guide.doctor }}</div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <h2>Book Doctor Appointment</h2>
+                <form action="/book-appointment" method="post">
+                    <label>Patient Name</label>
+                    <input type="text" name="patient_name" required />
+
+                    <label>Email</label>
+                    <input type="email" name="email" required />
+
+                    <label>Phone Number</label>
+                    <input type="tel" name="phone" required />
+
+                    <label>Select Doctor Type</label>
+                    <select name="doctor_type" required>
+                        <option value="">Choose doctor</option>
+                        <option>General Physician</option>
+                        <option>Cardiologist</option>
+                        <option>Dermatologist</option>
+                        <option>Neurologist</option>
+                        <option>Orthopedic</option>
+                        <option>Pediatrician</option>
+                    </select>
+
+                    <label>Preferred Date</label>
+                    <input type="date" name="date" required />
+
+                    <label>Message</label>
+                    <textarea name="message" placeholder="Write your concern here..."></textarea>
+
+                    <button type="submit">Book Appointment</button>
+                </form>
+
+                {% if booking_msg %}
+                    <div class="success">{{ booking_msg }}</div>
+                {% endif %}
+
+                {% if booking_data %}
+                    <div class="result-box">
+                        <p><strong>Name:</strong> {{ booking_data.patient_name }}</p>
+                        <p><strong>Email:</strong> {{ booking_data.email }}</p>
+                        <p><strong>Phone:</strong> {{ booking_data.phone }}</p>
+                        <p><strong>Doctor:</strong> {{ booking_data.doctor_type }}</p>
+                        <p><strong>Date:</strong> {{ booking_data.date }}</p>
+                        <p><strong>Message:</strong> {{ booking_data.message or 'N/A' }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
